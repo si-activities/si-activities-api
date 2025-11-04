@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: siact
+      POSTGRES_PASSWORD: siact
+      POSTGRES_DB: siact
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U siact"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: on-failure
+    volumes:
+      - db-data:/var/lib/postgresql
+
+  backend:
+    image: si-activities-backend:latest
+    environment:
+      DB_USERNAME: siact
+      DB_PASSWORD: siact
+      DB_URL: jdbc:postgresql://db:5432/siact
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+
+volumes:
+  db-data:

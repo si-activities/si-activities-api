@@ -13,6 +13,7 @@ import com.si.activities.server.services.UserService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -20,25 +21,42 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class SecurityFilter extends OncePerRequestFilter {
-  /* class responsible for adding the user auth info
-   to the security context, that way the application
-   knows the user is logged in */
+  /*
+   * class responsible for adding the user auth info
+   * to the security context, that way the application
+   * knows the user is logged in
+   */
 
   private final TokenService tokenService;
   private final UserService userService;
 
   private String recoverToken(HttpServletRequest req) {
-    String authHeader = req.getHeader("Authorization");
-    return authHeader == null ? null : authHeader.replace("Bearer ", "");
+    Cookie[] cookies = req.getCookies();
+
+    if (cookies == null) {
+      return null;
+    }
+
+    for (Cookie cookie : cookies) {
+      if (cookie.getName() == "siact_auth_token") {
+        return cookie.getValue();
+      }
+    }
+
+    return null;
   }
 
   @Override
   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
     String token = recoverToken(request);
+    String nickname = null;
 
     if (token != null) {
-      String nickname = tokenService.validateToken(token);
+      nickname = tokenService.validateToken(token);
+    }
+
+    if (nickname != null) {
       UserDetails user = userService.loadUserByUsername(nickname);
 
       var auth = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());

@@ -1,6 +1,8 @@
 package com.si.activities.server.controllers;
 
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -42,9 +44,12 @@ public class AuthenticationController {
 
     User userAuth = (User) authResp.getPrincipal();
     String token = tokenService.generateToken(userAuth);
+    ResponseCookie cookie = ResponseCookie.from("siact_auth_token", token).httpOnly(true).sameSite("Strict").path("/")
+        .maxAge(60 * 60 * 8).build();
+    AuthenticationResponse body = new AuthenticationResponse(
+        new UserResponseDTO(userAuth.getId(), userAuth.getName(), userAuth.getNickname(), userAuth.getRoles()));
 
-    return ResponseEntity.ok(new AuthenticationResponse(
-        new UserResponseDTO(userAuth.getId(), userAuth.getName(), userAuth.getNickname(), userAuth.getRoles()), token));
+    return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(body);
   }
 
   @PostMapping("/signup")
